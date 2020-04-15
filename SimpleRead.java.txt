@@ -1,0 +1,185 @@
+import com.commondb.Common_DB;
+import java.io.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*; //import gnu.io.*;
+import javax.comm.*;
+public class SimpleRead implements Runnable, SerialPortEventListener {
+    static CommPortIdentifier portId;
+    static Enumeration portList;
+InputStream inputStream;
+SerialPort serialPort;
+Thread readThread;
+byte[] readBuffer;
+int z=0;
+String data=null;
+public  String recvdData="aa";
+public static void main(String[] args) {
+    portList = CommPortIdentifier.getPortIdentifiers();
+    System.out.println("portList... " + portList);
+    while (portList.hasMoreElements()) {
+        portId = (CommPortIdentifier) portList.nextElement();
+        if (portId.getPortType() == CommPortIdentifier.PORT_SERIAL) {
+            System.out.println("port identified is Serial.. "
+                    + portId.getPortType());
+            if (portId.getName().equals("COM5")) {
+                System.out.println("port identified is COM5.. "
+                        + portId.getName());
+                // if (portId.getName().equals("/dev/term/a")) {
+                SimpleRead reader = new SimpleRead();
+            } else {
+                System.out.println("unable to open port");
+            }
+        }
+    }
+}
+public SimpleRead() {
+    try {
+        System.out.println("In SimpleRead() contructor");
+        serialPort = (SerialPort) portId.open("SimpleReadApp1111",2000);
+        System.out.println(" Serial Port.. " + serialPort);
+    } catch (PortInUseException e) {
+        System.out.println("Port in use Exception");
+    }
+    try {
+        inputStream = serialPort.getInputStream();
+        System.out.println(" Input Stream... " + inputStream);
+    } catch (IOException e) {
+        System.out.println("IO Exception");
+    }
+    try {
+        serialPort.addEventListener(this);
+    } catch (TooManyListenersException e) {
+        System.out.println("Tooo many Listener exception");
+    }
+    serialPort.notifyOnDataAvailable(true);
+    try {
+        serialPort.setSerialPortParams(9600, SerialPort.DATABITS_8,
+                SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+        // no handshaking or other flow control
+        serialPort.setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
+        // timer on any read of the serial port
+        serialPort.enableReceiveTimeout(500);
+
+        System.out.println("................");
+    } catch (UnsupportedCommOperationException e) {
+        System.out.println("UnSupported comm operation");
+    }
+    readThread = new Thread(this);
+    readThread.start();
+}
+public void run() {
+    try {
+        System.out.println("In run() function ");
+        Thread.sleep(100);
+        // System.out.println();
+    } catch (InterruptedException e) {
+        System.out.println("Interrupted Exception in run() method");
+    }
+}
+public void serialEvent(SerialPortEvent event) {
+//
+//    // System.out.println("In Serial Event function().. " + event +
+//    // event.getEventType());
+//    String an="";
+//   // System.out.print("hello");
+//     StringBuilder sb=new StringBuilder(an);
+//    switch (event.getEventType()) {
+//    /*
+//     * case SerialPortEvent.BI: case SerialPortEvent.OE: case
+//     * SerialPortEvent.FE: case SerialPortEvent.PE: case SerialPortEvent.CD:
+//     * case SerialPortEvent.CTS: case SerialPortEvent.DSR: case
+//     * SerialPortEvent.RI: case SerialPortEvent.OUTPUT_BUFFER_EMPTY: break;
+//     */
+//    case SerialPortEvent.DATA_AVAILABLE:
+//        readBuffer = new byte[27];
+//
+//        try {
+//
+//           // while (inputStream.available()>0) {
+//
+//                int numBytes = inputStream.read(readBuffer);
+//             // System.out.println("Number of bytes read " + numBytes);
+//            //}
+//            String x=new String(readBuffer);
+//           // System.out.print(x);
+////           int len=x.length();
+////           int z=len-6;
+////           String sub=x.substring(z);
+//           // System.out.print(new String(readBuffer,0,numBytes));
+//            an=new String(readBuffer,0,numBytes);
+//            
+//            an=an.trim();
+//            
+//           System.out.print(an);
+//            
+////            int m=sb.length();
+////            sb.insert(m,an);
+////            System.out.print(new String(sb));
+//        } catch (IOException e) {
+//            System.out.println("IO Exception in SerialEvent()");
+//        } 
+//        break;
+//    }
+//     // System.out.print(an); 
+//   //String trimmedString = an.trim();
+//  // System.out.print(an); 
+//   //String[] sep=an.split("-");
+//               // String A = sep[0]; 
+	
+//               // System.out.print(A);        
+//     //char result = A.charAt(0);
+//     //System.out.print("result-"+result);
+///*  String one = new String(readBuffer);
+//    char two = one.charAt(0);
+//    System.out.println("Character at three: " + two);*/
+ switch (event.getEventType()) 
+  {
+   case SerialPortEvent.DATA_AVAILABLE:
+   // System.out.println("DATA_AVAILABLE");
+    byte[] readBuffer = new byte[1024];
+    int numBytes=1024;
+    data="";
+    String x="";
+//            Connection con=null;
+//        Statement st=null;
+//        ResultSet rs=null;
+    try 
+    {
+        Thread.sleep(100);          
+        while (inputStream.available() > 0)
+        {
+            numBytes = inputStream.read(readBuffer);//count of reading data
+            data=data+new String(readBuffer,0,numBytes);
+            data=data.trim();
+            this.recvdData+=data;
+        }
+        System.out.println("Your data is: "+data);
+        try
+        {
+            Class.forName("com.mysql.jdbc.Driver");
+            Connection con=DriverManager.getConnection("jdbc:mysql://localhost:3306/blindapp","root","password");
+            PreparedStatement ps=con.prepareStatement("insert into braille values(?)");
+            ps.setString(1, data);
+            ps.executeUpdate();
+            System.out.println("Successfully Stored");
+        }
+        catch(ClassNotFoundException | SQLException e)
+        {
+            System.out.println(e);
+        }     
+    } 
+    catch (InterruptedException | IOException e) 
+    {
+        System.out.println("Exception in serial event-->"+e);
+    }
+    break;//break from switch case 1:
+    }//end of switch 
+}
+}

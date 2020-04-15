@@ -1,0 +1,90 @@
+package blind;
+import com.commondb.Common_DB;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.jws.WebService;
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
+@WebService(serviceName = "NewWebService")
+public class NewWebService {
+    @WebMethod(operationName = "Register")
+    public String Register(@WebParam(name = "username") String username,@WebParam(name = "type") String type) {
+        try
+        {
+            Class.forName("com.mysql.jdbc.Driver");
+            Connection con=DriverManager.getConnection("jdbc:mysql://localhost:3306/blindapp", "root","password");
+            Statement st=con.createStatement();
+            ResultSet rs=st.executeQuery("select * from register where username='"+username+"'");
+            if(rs.next())
+            {
+                String status=rs.getString("status");
+                int count=Integer.parseInt(status)+1;
+                String result=String.valueOf(count);
+                PreparedStatement ps=con.prepareStatement("update register set status='"+result+"' where username='"+username+"'");
+                ps.executeUpdate();
+            }
+            else
+            {
+                PreparedStatement ps=con.prepareStatement("insert into register(username,type) values ('"+username+"','"+type+"')");
+                ps.executeUpdate();
+            }
+        }
+        catch(ClassNotFoundException | SQLException e)
+        {
+            System.out.println(e);
+        }
+        return type;
+    }
+    @WebMethod(operationName = "LanguageLearn")
+    public String LanguageLearn(@WebParam(name = "username") String username,@WebParam(name = "language") String language) {
+        System.out.println("Username: "+username);
+        System.out.println("Language: "+language);
+        try
+        {
+            Class.forName("com.mysql.jdbc.Driver");
+            Connection con=DriverManager.getConnection("jdbc:mysql://localhost:3306/blindapp", "root","password");
+            PreparedStatement ps=con.prepareStatement("update register set language1='"+language+"' where username='"+username+"'");
+            ps.executeUpdate();
+        }
+        catch(ClassNotFoundException | SQLException e)
+        {
+            System.out.println(e);
+        }
+        return language;
+    }
+    @WebMethod(operationName = "getDeviceList1")
+    public String getDeviceList1(@WebParam(name = "report") String report) {
+        String braille;
+       StringBuilder sb = new StringBuilder();
+        try {
+           Class.forName("com.mysql.jdbc.Driver");
+           Connection con=DriverManager.getConnection("jdbc:mysql://localhost:3306/blindapp","root","password");
+           Statement st=con.createStatement();
+           ResultSet rs1=st.executeQuery("select * from braille");
+          if(rs1.next()){
+               braille=rs1.getString("letters");
+              System.out.println("Braille Value: "+braille);
+              return braille;
+              //String sqlquery="DROP TABLE braille";
+          }
+          else
+          {
+              return "Sorry Wrong Braille";
+          }  
+        } catch (ClassNotFoundException | SQLException ex) {
+         Logger.getLogger(NewWebService.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        try { 
+            } catch (Exception ex) {
+         Logger.getLogger(NewWebService.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        return null;
+    }
+}
+
